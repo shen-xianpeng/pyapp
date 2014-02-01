@@ -50,7 +50,7 @@ def getEntryByName(name):
 class MyApp(wx.App):
 
     def OnInit(self):
-        frame = MyFrame(None, -1, u"通讯录")
+        frame = MyFrame(None, u"通讯录")
         frame.Show()
         self.SetTopWindow(frame)
         return True
@@ -58,8 +58,8 @@ class MyApp(wx.App):
 
 class MyFrame(wx.Frame):
 
-    def __init__(self, parent, id, title):
-        wx.Frame.__init__(self, parent, id, title, size=(500, -1))
+    def __init__(self, parent, title):
+        wx.Frame.__init__(self, parent, wx.NewId(), title, size=(500, -1))
         wx.Frame.CenterOnScreen(self)
         self.panel = MyPanel(self)
 
@@ -98,7 +98,7 @@ class MyPanel(wx.Panel):
                     continue
 
     def onAdd(self, event):
-        self.new_w = NewWindow(self, id=21)
+        self.new_w = NewWindow(self)
         self.new_w.Show()
 
 
@@ -116,7 +116,7 @@ class MyPopupMenu(wx.Menu):
         self.Bind(wx.EVT_MENU, self.OnDelete, menuDel)
 
     def onEdit(self,e):
-        edit_w = EditWindow(self.parent.parent, id=-1, initials=self.item)
+        edit_w = EditWindow(self.parent.parent, initials=self.item)
         edit_w.Show()
 
     def OnDelete(self,e):
@@ -149,7 +149,7 @@ class MyListCtrl(wx.ListCtrl, wx.lib.mixins.listctrl.ColumnSorterMixin):
         self.SetColumnWidth(2, 200)
         self.Bind(wx.EVT_LIST_ITEM_SELECTED, self.OnSelect)
         self.Bind(wx.EVT_LIST_ITEM_DESELECTED, self.OnDeSelect)
-        self.Bind(wx.EVT_RIGHT_DOWN, self.OnRightDown)
+        self.Bind(wx.EVT_LIST_ITEM_RIGHT_CLICK, self.OnRightClick)
         self.data = None
         self.itemDataMap = {}
         self.refresh_list()
@@ -182,9 +182,13 @@ class MyListCtrl(wx.ListCtrl, wx.lib.mixins.listctrl.ColumnSorterMixin):
         finally:
             conn.close()
 
-    def OnRightDown(self, event):
-        self.R_MOUSE = 1
-        self.position = event.GetPosition()
+    def OnRightClick(self, event):
+        position = event.GetPosition()
+        index = event.GetIndex()
+        item = []
+        for i in range(3):
+            item.append(self.GetItem(itemId=index, col=i).GetText())
+        self.PopupMenu(MyPopupMenu(self, item), position)
         event.Skip()
 
     def OnDeSelect(self, event):
@@ -194,21 +198,14 @@ class MyListCtrl(wx.ListCtrl, wx.lib.mixins.listctrl.ColumnSorterMixin):
 
     def OnSelect(self, event):
         index = event.GetIndex()
-        item = []
-        for i in range(3):
-            item.append(self.GetItem(itemId=index, col=i).GetText())
-        #sometimes , in selected state , can't select again
         self.SetItemState(index, 0, wx.LIST_STATE_SELECTED)
         self.SetItemBackgroundColour(index, wx.Colour(255,255,0))
-        if self.R_MOUSE:
-            self.R_MOUSE = 0
-            wx.CallAfter(self.PopupMenu, MyPopupMenu(self, item), self.position)
 
 
 class NewWindow(wx.Frame):
 
-    def __init__(self, parent, id):
-        wx.Frame.__init__(self, parent, id, size=(400,250), style=wx.DEFAULT_FRAME_STYLE | wx.STAY_ON_TOP)
+    def __init__(self, parent):
+        wx.Frame.__init__(self, parent, size=(400,250), style=wx.DEFAULT_FRAME_STYLE | wx.STAY_ON_TOP)
         self.parent = parent
         self.new_friend = {}
         self.CenterOnParent()
@@ -320,8 +317,8 @@ class NewWindow(wx.Frame):
 
 class EditWindow(NewWindow):
 
-    def __init__(self, parent, id, initials=None):
-        super(EditWindow, self).__init__(parent, id)
+    def __init__(self, parent, initials=None):
+        super(EditWindow, self).__init__(parent)
         self.initials = initials
         self.button.SetLabel(u"更新")
         self.SetTitle(u"修改")
